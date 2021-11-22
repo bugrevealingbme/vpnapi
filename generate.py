@@ -1,50 +1,59 @@
-import sys
+import csv
 import json
-from github import Github
+from requests import Session
 
-# Configuration
-REPO_NAME = "Magisk-Modules-Alt-Repo"
-REPO_TITLE = "Magisk Modules Alt Repo"
+def get_proxy(data,key):
+    liste = []
+    for i in data:
+        try:
+            if int(int(i['Speed'])/int(i['NumVpnSessions'])) == int(key):
+                print(key)
+                liste.append(i)
+        except:
+            pass
+    return liste
 
-# Skeleton for the repository
-meta = {
-    "name": REPO_TITLE,
-    "last_update": "",
-    "modules": []
-}
 
-# Initialize the GitHub objects
-g = Github(sys.argv[1])
-user = g.get_user(REPO_NAME)
-repos = user.get_repos()
 
-# Fetch the last repository update
-meta["last_update"] = int(user.updated_at.timestamp() * 1000)
+def best_proxy_finder(data):
+    speed_list = []
+    best_list = []
+    normal_list = []
+    for proxies in data:
+        try:
+            speed_list.append(int(int(proxies['Speed'])/int(proxies['NumVpnSessions'])))
+        except:
+            pass
+    speed_list.sort(reverse=True)
+    for i in speed_list[1:]:
+        for b in get_proxy(data,i):
+            if b not in best_list:
+                if len(best_list) != 5:
+                    best_list.append(b)
+                else:
+                    normal_list.append(b)
+    return [best_list,normal_list]
 
-# Iterate over all public repositories
-for repo in repos:
-    # It is possible that module.prop does not exist (meta repo)
-    try:
-        # Parse module.prop into a python object
-        moduleprop_raw = repo.get_contents("module.prop").decoded_content.decode("UTF-8")
-        moduleprop = {}
-        for line in moduleprop_raw.splitlines():
-            lhs, rhs = line.split("=")
-            moduleprop[lhs] = rhs
-        
-        # Create meta module information
-        module = {
-            "id": moduleprop["id"],
-            "last_update": int(repo.updated_at.timestamp() * 1000),
-            "prop_url": f"https://raw.githubusercontent.com/{repo.full_name}/master/module.prop",
-            "zip_url": f"https://github.com/{repo.full_name}/archive/master.zip",
-            "notes_url": f"https://raw.githubusercontent.com/{repo.full_name}/master/README.md"
-        }
 
-        # Append to skeleton
-        meta["modules"].append(module)
-    except:
-        continue
 
-# Return our final skeleton
-print(json.dumps(meta, indent=4, sort_keys=True))
+def get_csv_data_from_api():
+    session = Session()
+    with open('data.csv','w',encoding='utf-8', newline='') as f:
+        f.write(session.get('http://www.vpngate.net/api/iphone/').text[15:-5])
+    return csv_to_json()
+
+
+def csv_to_json():
+    liste = []
+    with open('data.csv','r') as csvFile:
+        csvReader = csv.DictReader(csvFile)
+        for row in csvReader:
+            liste.append(row)
+    return best_proxy_finder(liste)
+
+
+data = get_csv_data_from_api()
+best = data[0]
+normal = data[1]
+
+print(json.dumps({'best':best, 'normal':normal},indent=2))
