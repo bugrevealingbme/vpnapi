@@ -7,7 +7,6 @@ def get_proxy(data,key):
     for i in data:
         try:
             if int(int(i['Speed'])/int(i['NumVpnSessions'])) == int(key):
-                print(key)
                 liste.append(i)
         except:
             pass
