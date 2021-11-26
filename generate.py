@@ -1,58 +1,43 @@
-import csv
 import json
-from requests import Session
+from aiohttp import ClientSession
+import asyncio
 
-def get_proxy(data,key):
-    liste = []
-    for i in data:
-        try:
-            if int(int(i['Speed'])/int(i['NumVpnSessions'])) == int(key):
-                liste.append(i)
-        except:
-            pass
-    return liste
-
-
-
-def best_proxy_finder(data):
-    speed_list = []
+async def vpngate():
     best_list = []
     normal_list = []
-    for proxies in data:
-        try:
-            speed_list.append(int(int(proxies['Speed'])/int(proxies['NumVpnSessions'])))
-        except:
-            pass
-    speed_list.sort(reverse=True)
-    for i in speed_list[1:]:
-        for b in get_proxy(data,i):
-            if b not in best_list:
-                if len(best_list) != 5:
-                    best_list.append(b)
+    async with ClientSession() as session:
+        async with session.get('http://www.vpngate.net/api/iphone/',ssl=False) as response:
+            _vpn_data = await response.text()
+            vpn_data = _vpn_data.replace('\r','')
+            servers = [line.split(',') for line in vpn_data.split('\n')]
+            labels = servers[1]
+            labels[0] = labels[0][1:]
+            servers = [s for s in servers[2:] if len(s) > 1]
+            for i in servers:
+                a = {
+                    labels[0]:i[0],
+                    labels[1]:i[1],
+                    labels[2]:i[2],
+                    labels[3]:i[3],
+                    labels[4]:i[4],
+                    labels[5]:i[5],
+                    labels[6]:i[6],
+                    labels[7]:i[7],
+                    labels[8]:i[8],
+                    labels[9]:i[9],
+                    labels[10]:i[10],
+                    labels[11]:i[11],
+                    labels[12]:i[12],
+                    labels[13]:i[13],
+                    labels[14]:i[14]
+                    }
+                if len(best_list) !=5:
+                    best_list.append(a)
                 else:
-                    normal_list.append(b)
-    return [best_list,normal_list]
+                    normal_list.append(a)
+    return [best_list, normal_list]
 
-
-
-def get_csv_data_from_api():
-    session = Session()
-    with open('data.csv','w',encoding='utf-8', newline='') as f:
-        f.write(session.get('http://www.vpngate.net/api/iphone/').text[15:-5])
-    return csv_to_json()
-
-
-def csv_to_json():
-    liste = []
-    with open('data.csv','r') as csvFile:
-        csvReader = csv.DictReader(csvFile)
-        for row in csvReader:
-            liste.append(row)
-    return best_proxy_finder(liste)
-
-
-data = get_csv_data_from_api()
-best = data[0]
-normal = data[1]
-
-print(json.dumps({'best':best, 'normal':normal},indent=2))
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+data = loop.run_until_complete(vpngate())
+print(json.dumps({'best':data[0],'normal':data[1]},indent=2))
