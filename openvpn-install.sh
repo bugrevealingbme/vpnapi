@@ -2,6 +2,7 @@
 #
 # https://github.com/Nyr/openvpn-install
 #
+# This is the Authware variant, that configures your server to work with our OpenVPN authentication
 # Copyright (c) 2013 Nyr. Released under the MIT License.
 
 
@@ -12,7 +13,7 @@ if readlink /proc/$$/exe | grep -q "dash"; then
 fi
 
 # Discard stdin. Needed when running from an one-liner which includes a newline
-read -N 999999 -t 0.001
+read -r -N 999999 -t 0.001
 
 # Detect OpenVZ 6
 if [[ $(uname -r | cut -d "." -f 1) -eq 2 ]]; then
@@ -83,6 +84,7 @@ new_client () {
 	# Generates the custom client.ovpn
 	{
 	cat /etc/openvpn/server/client-common.txt
+	echo "auth-user-pass"
 	echo "<ca>"
 	cat /etc/openvpn/server/easy-rsa/pki/ca.crt
 	echo "</ca>"
@@ -107,7 +109,19 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 		apt-get install -y wget
 	fi
 	clear
-	echo 'Welcome to this OpenVPN road warrior installer!'
+
+	echo '     _         _   _                           '
+	echo '    / \  _   _| |_| |____      ____ _ _ __ ___ '
+	echo '   / _ \| | | | __| '\''_ \ \ /\ / / _` | '\''__/ _ \'
+	echo '  / ___ \ |_| | |_| | | \ V  V / (_| | | |  __/'
+	echo ' /_/   \_\__,_|\__|_| |_|\_/\_/ \__,_|_|  \___|'
+	
+	echo
+	echo 'Welcome to the OpenVPN installer!'
+	echo
+	echo 'This installer has been modified to automatically configure your server for Authware OpenVPN authentication'
+	echo 'Find the original source code for this installer at: https://github.com/Nyr/openvpn-install'
+
 	# If system has a single IPv4, it is selected automatically. Else, ask the user
 	if [[ $(ip -4 addr | grep inet | grep -vEc '127(\.[0-9]{1,3}){3}') -eq 1 ]]; then
 		ip=$(ip -4 addr | grep inet | grep -vE '127(\.[0-9]{1,3}){3}' | cut -d '/' -f 1 | grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}')
@@ -116,10 +130,10 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 		echo
 		echo "Which IPv4 address should be used?"
 		ip -4 addr | grep inet | grep -vE '127(\.[0-9]{1,3}){3}' | cut -d '/' -f 1 | grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}' | nl -s ') '
-		read -p "IPv4 address [1]: " ip_number
+		read -r -p "IPv4 address [1]: " ip_number
 		until [[ -z "$ip_number" || "$ip_number" =~ ^[0-9]+$ && "$ip_number" -le "$number_of_ip" ]]; do
 			echo "$ip_number: invalid selection."
-			read -p "IPv4 address [1]: " ip_number
+			read -r -p "IPv4 address [1]: " ip_number
 		done
 		[[ -z "$ip_number" ]] && ip_number="1"
 		ip=$(ip -4 addr | grep inet | grep -vE '127(\.[0-9]{1,3}){3}' | cut -d '/' -f 1 | grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}' | sed -n "$ip_number"p)
@@ -130,11 +144,11 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 		echo "This server is behind NAT. What is the public IPv4 address or hostname?"
 		# Get public IP and sanitize with grep
 		get_public_ip=$(grep -m 1 -oE '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' <<< "$(wget -T 10 -t 1 -4qO- "http://ip1.dynupdate.no-ip.com/" || curl -m 10 -4Ls "http://ip1.dynupdate.no-ip.com/")")
-		read -p "Public IPv4 address / hostname [$get_public_ip]: " public_ip
+		read -r -p "Public IPv4 address / hostname [$get_public_ip]: " public_ip
 		# If the checkip service is unavailable and user didn't provide input, ask again
 		until [[ -n "$get_public_ip" || -n "$public_ip" ]]; do
 			echo "Invalid input."
-			read -p "Public IPv4 address / hostname: " public_ip
+			read -r -p "Public IPv4 address / hostname: " public_ip
 		done
 		[[ -z "$public_ip" ]] && public_ip="$get_public_ip"
 	fi
@@ -148,10 +162,10 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 		echo
 		echo "Which IPv6 address should be used?"
 		ip -6 addr | grep 'inet6 [23]' | cut -d '/' -f 1 | grep -oE '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}' | nl -s ') '
-		read -p "IPv6 address [1]: " ip6_number
+		read -r -p "IPv6 address [1]: " ip6_number
 		until [[ -z "$ip6_number" || "$ip6_number" =~ ^[0-9]+$ && "$ip6_number" -le "$number_of_ip6" ]]; do
 			echo "$ip6_number: invalid selection."
-			read -p "IPv6 address [1]: " ip6_number
+			read -r -p "IPv6 address [1]: " ip6_number
 		done
 		[[ -z "$ip6_number" ]] && ip6_number="1"
 		ip6=$(ip -6 addr | grep 'inet6 [23]' | cut -d '/' -f 1 | grep -oE '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}' | sed -n "$ip6_number"p)
@@ -160,10 +174,10 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 	echo "Which protocol should OpenVPN use?"
 	echo "   1) UDP (recommended)"
 	echo "   2) TCP"
-	read -p "Protocol [1]: " protocol
+	read -r -p "Protocol [1]: " protocol
 	until [[ -z "$protocol" || "$protocol" =~ ^[12]$ ]]; do
 		echo "$protocol: invalid selection."
-		read -p "Protocol [1]: " protocol
+		read -r -p "Protocol [1]: " protocol
 	done
 	case "$protocol" in
 		1|"") 
@@ -175,10 +189,10 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 	esac
 	echo
 	echo "What port should OpenVPN listen to?"
-	read -p "Port [1194]: " port
+	read -r -p "Port [1194]: " port
 	until [[ -z "$port" || "$port" =~ ^[0-9]+$ && "$port" -le 65535 ]]; do
 		echo "$port: invalid port."
-		read -p "Port [1194]: " port
+		read -r -p "Port [1194]: " port
 	done
 	[[ -z "$port" ]] && port="1194"
 	echo
@@ -189,68 +203,17 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 	echo "   4) OpenDNS"
 	echo "   5) Quad9"
 	echo "   6) AdGuard"
-	read -p "DNS server [1]: " dns
+	read -r -p "DNS server [1]: " dns
 	until [[ -z "$dns" || "$dns" =~ ^[1-6]$ ]]; do
 		echo "$dns: invalid selection."
-		read -p "DNS server [1]: " dns
+		read -r -p "DNS server [1]: " dns
 	done
-	echo
-	echo "Setup CA password?"
-	echo "   1) No"
-	echo "   2) Yes"
-	read -p "CA password? [1]: " ca_pass_option
-	until [[ -z "$ca_pass_option" || "$ca_pass_option" =~ ^[12]$ ]]; do
-		echo "$ca_pass_option: invalid selection."
-		read -p "CA password? [1]: " ca_pass_option
-	done
-	case "$ca_pass_option" in
-		1|"") 
-		ca_pass_option=nopass
-		;;
-		2) 
-		ca_pass_option=""
-		;;
-	esac
-	echo
-	echo "Setup VPN-server password?"
-	echo "   1) No"
-	echo "   2) Yes"
-	read -p "server cert password? [1]: " srv_pass_option
-	until [[ -z "$srv_pass_option" || "$srv_pass_option" =~ ^[12]$ ]]; do
-		echo "$srv_pass_option: invalid selection."
-		read -p "server cert password? [1]: " srv_pass_option
-	done
-	case "$srv_pass_option" in
-		1|"") 
-		srv_pass_option=nopass
-		;;
-		2) 
-		srv_pass_option=""
-		;;
-	esac
 	echo
 	echo "Enter a name for the first client:"
-	read -p "Name [client]: " unsanitized_client
+	read -r -p "Name [client]: " unsanitized_client
 	# Allow a limited set of characters to avoid conflicts
 	client=$(sed 's/[^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-]/_/g' <<< "$unsanitized_client")
 	[[ -z "$client" ]] && client="client"
-	echo
-	echo "Setup client cert password?"
-	echo "   1) No"
-	echo "   2) Yes"
-	read -p "Client cert password? [1]: " client_pass_option
-	until [[ -z "$client_pass_option" || "$client_pass_option" =~ ^[12]$ ]]; do
-		echo "$client_pass_option: invalid selection."
-		read -p "Client cert password? [1]: " client_pass_option
-	done
-	case "$client_pass_option" in
-		1|"") 
-		client_pass_option=nopass
-		;;
-		2) 
-		client_pass_option=""
-		;;
-	esac
 	echo
 	echo "OpenVPN installation is ready to begin."
 	# Install a firewall if firewalld or iptables are not already available
@@ -291,12 +254,12 @@ LimitNPROC=infinity" > /etc/systemd/system/openvpn-server@server.service.d/disab
 	mkdir -p /etc/openvpn/server/easy-rsa/
 	{ wget -qO- "$easy_rsa_url" 2>/dev/null || curl -sL "$easy_rsa_url" ; } | tar xz -C /etc/openvpn/server/easy-rsa/ --strip-components 1
 	chown -R root:root /etc/openvpn/server/easy-rsa/
-	cd /etc/openvpn/server/easy-rsa/\
+	cd /etc/openvpn/server/easy-rsa/ || exit
 	# Create the PKI, set up the CA and the server and client certificates
 	./easyrsa init-pki
-	./easyrsa --batch build-ca "$ca_pass_option"
-	EASYRSA_CERT_EXPIRE=3650 ./easyrsa build-server-full server "$srv_pass_option"
-	EASYRSA_CERT_EXPIRE=3650 ./easyrsa build-client-full "$client" "$client_pass_option"
+	./easyrsa --batch build-ca nopass
+	EASYRSA_CERT_EXPIRE=3650 ./easyrsa build-server-full server nopass
+	EASYRSA_CERT_EXPIRE=3650 ./easyrsa build-client-full "$client" nopass
 	EASYRSA_CRL_DAYS=3650 ./easyrsa gen-crl
 	# Move the stuff we need
 	cp pki/ca.crt pki/private/ca.key pki/issued/server.crt pki/private/server.key pki/crl.pem /etc/openvpn/server
@@ -306,6 +269,12 @@ LimitNPROC=infinity" > /etc/systemd/system/openvpn-server@server.service.d/disab
 	chmod o+x /etc/openvpn/server/
 	# Generate key for tls-crypt
 	openvpn --genkey --secret /etc/openvpn/server/tc.key
+	# Generate management key
+	secret=$(openssl rand -hex 12)
+
+	# Write the management key
+	echo $secret >> /etc/openvpn/server/password
+
 	# Create the DH parameters file using the predefined ffdhe2048 group
 	echo '-----BEGIN DH PARAMETERS-----
 MIIBCAKCAQEA//////////+t+FRYortKmq/cViAnPTzx2LnFg84tNpWp4TZBFGQz
@@ -316,7 +285,9 @@ YdEIqUuyyOP7uWrat2DX9GgdT0Kj3jlN9K5W7edjcrsZCwenyO4KbXCeAvzhzffi
 ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
 -----END DH PARAMETERS-----' > /etc/openvpn/server/dh.pem
 	# Generate server.conf
-	echo "local $ip
+	echo "management 0.0.0.0 6666 password
+management-client-auth
+local $ip
 port $port
 proto $protocol
 dev tun
@@ -324,7 +295,7 @@ ca ca.crt
 cert server.crt
 key server.key
 dh dh.pem
-auth SHA512
+auth SHA256
 tls-crypt tc.key
 topology subnet
 server 10.8.0.0 255.255.255.0" > /etc/openvpn/server/server.conf
@@ -373,7 +344,7 @@ server 10.8.0.0 255.255.255.0" > /etc/openvpn/server/server.conf
 		;;
 	esac
 	echo "keepalive 10 120
-cipher AES-256-CBC
+cipher AES-128-GCM
 user nobody
 group $group_name
 persist-key
@@ -472,8 +443,8 @@ nobind
 persist-key
 persist-tun
 remote-cert-tls server
-auth SHA512
-cipher AES-256-CBC
+auth SHA256
+cipher AES-128-GCM
 ignore-unknown-option block-outside-dns
 block-outside-dns
 verb 3" > /etc/openvpn/server/client-common.txt
@@ -482,107 +453,43 @@ verb 3" > /etc/openvpn/server/client-common.txt
 	# Generates the custom client.ovpn
 	new_client
 	echo
-	echo "Finished!"
+	echo "Success: OpenVPN has been installed and configured!"
 	echo
-	echo "The client configuration is available in:" ~/"$client.ovpn"
-	echo "New clients can be added by running this script again."
+	echo "The client configuration is available in: " ~/"$client.ovpn"
+	echo "The secret for the Authware setup is: ${secret}"
+	echo
+	echo "If you need to remove OpenVPN from your system, run this script again and select option 1"
 else
 	clear
+	echo '     _         _   _                           '
+	echo '    / \  _   _| |_| |____      ____ _ _ __ ___ '
+	echo '   / _ \| | | | __| '\''_ \ \ /\ / / _` | '\''__/ _ \'
+	echo '  / ___ \ |_| | |_| | | \ V  V / (_| | | |  __/'
+	echo ' /_/   \_\__,_|\__|_| |_|\_/\_/ \__,_|_|  \___|'
+	
+	echo
+	echo 'Welcome to the OpenVPN installer!'
+	echo
+	echo 'This installer has been modified to automatically configure your server for Authware OpenVPN authentication'
+	echo 'Find the original source code for this installer at: https://github.com/Nyr/openvpn-install'
+	echo
 	echo "OpenVPN is already installed."
 	echo
 	echo "Select an option:"
-	echo "   1) Add a new client"
-	echo "   2) Revoke an existing client"
-	echo "   3) Remove OpenVPN"
-	echo "   4) Exit"
-	read -p "Option: " option
-	until [[ "$option" =~ ^[1-4]$ ]]; do
+	echo "   1) Remove OpenVPN"
+	echo "   2) Exit"
+	read -r -p "Option: " option
+	until [[ "$option" =~ ^[1-2]$ ]]; do
 		echo "$option: invalid selection."
-		read -p "Option: " option
+		read -r -p "Option: " option
 	done
 	case "$option" in
 		1)
 			echo
-			echo "Provide a name for the client:"
-			read -p "Name: " unsanitized_client
-			client=$(sed 's/[^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-]/_/g' <<< "$unsanitized_client")
-			while [[ -z "$client" || -e /etc/openvpn/server/easy-rsa/pki/issued/"$client".crt ]]; do
-				echo "$client: invalid name."
-				read -p "Name: " unsanitized_client
-				client=$(sed 's/[^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-]/_/g' <<< "$unsanitized_client")
-			done
-			cd /etc/openvpn/server/easy-rsa/
-			echo
-			echo "Setup client cert password?"
-			echo "   1) No"
-			echo "   2) Yes"
-			read -p "Client cert password? [1]: " client_pass_option
-			until [[ -z "$client_pass_option" || "$client_pass_option" =~ ^[12]$ ]]; do
-				echo "$client_pass_option: invalid selection."
-				read -p "Client cert password? [1]: " client_pass_option
-			done
-			case "$client_pass_option" in
-				1|"") 
-				client_pass_option=nopass
-				;;
-				2) 
-				client_pass_option=""
-				;;
-			esac
-			echo
-			EASYRSA_CERT_EXPIRE=3650 ./easyrsa build-client-full "$client" "$client_pass_option"
-			# Generates the custom client.ovpn
-			new_client
-			echo
-			echo "$client added. Configuration available in:" ~/"$client.ovpn"
-			exit
-		;;
-		2)
-			# This option could be documented a bit better and maybe even be simplified
-			# ...but what can I say, I want some sleep too
-			number_of_clients=$(tail -n +2 /etc/openvpn/server/easy-rsa/pki/index.txt | grep -c "^V")
-			if [[ "$number_of_clients" = 0 ]]; then
-				echo
-				echo "There are no existing clients!"
-				exit
-			fi
-			echo
-			echo "Select the client to revoke:"
-			tail -n +2 /etc/openvpn/server/easy-rsa/pki/index.txt | grep "^V" | cut -d '=' -f 2 | nl -s ') '
-			read -p "Client: " client_number
-			until [[ "$client_number" =~ ^[0-9]+$ && "$client_number" -le "$number_of_clients" ]]; do
-				echo "$client_number: invalid selection."
-				read -p "Client: " client_number
-			done
-			client=$(tail -n +2 /etc/openvpn/server/easy-rsa/pki/index.txt | grep "^V" | cut -d '=' -f 2 | sed -n "$client_number"p)
-			echo
-			read -p "Confirm $client revocation? [y/N]: " revoke
-			until [[ "$revoke" =~ ^[yYnN]*$ ]]; do
-				echo "$revoke: invalid selection."
-				read -p "Confirm $client revocation? [y/N]: " revoke
-			done
-			if [[ "$revoke" =~ ^[yY]$ ]]; then
-				cd /etc/openvpn/server/easy-rsa/
-				./easyrsa --batch revoke "$client"
-				EASYRSA_CRL_DAYS=3650 ./easyrsa gen-crl
-				rm -f /etc/openvpn/server/crl.pem
-				cp /etc/openvpn/server/easy-rsa/pki/crl.pem /etc/openvpn/server/crl.pem
-				# CRL is read with each client connection, when OpenVPN is dropped to nobody
-				chown nobody:"$group_name" /etc/openvpn/server/crl.pem
-				echo
-				echo "$client revoked!"
-			else
-				echo
-				echo "$client revocation aborted!"
-			fi
-			exit
-		;;
-		3)
-			echo
-			read -p "Confirm OpenVPN removal? [y/N]: " remove
+			read -r -p "Confirm OpenVPN removal? [y/N]: " remove
 			until [[ "$remove" =~ ^[yYnN]*$ ]]; do
 				echo "$remove: invalid selection."
-				read -p "Confirm OpenVPN removal? [y/N]: " remove
+				read -r -p "Confirm OpenVPN removal? [y/N]: " remove
 			done
 			if [[ "$remove" =~ ^[yY]$ ]]; then
 				port=$(grep '^port ' /etc/openvpn/server/server.conf | cut -d " " -f 2)
@@ -629,7 +536,7 @@ else
 			fi
 			exit
 		;;
-		4)
+		2)
 			exit
 		;;
 	esac
